@@ -17,27 +17,27 @@ class DatabaseHandler {
       join(path, DATABASE),
       onCreate: (database, version) async {
         await database.execute(
-          "CREATE TABLE $CREW_TABLE(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, attempts INTEGER NOT NULL, startDate TEXT NOT NULL, endDate TEXT)",
+          "CREATE TABLE $CREW_TABLE(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, startDate TEXT NOT NULL, finishDate TEXT)",
         );
       },
       version: 1,
     );
   }
 
-  Future<int> insertUser(Crew crew) async {
+  Future<int> insertCrew(Crew crew) async {
     int result = 0;
     final Database db = await initializeDB();
     result = await db.insert(CREW_TABLE, crew.toMap(), conflictAlgorithm: ConflictAlgorithm.replace);
     return result;
   }
 
-  Future<List<Crew>> retrieveUsers() async {
+  Future<List<Crew>> retrieveCrew() async {
     final Database db = await initializeDB();
     final List<Map<String, Object?>> queryResult = await db.query(CREW_TABLE);
     return queryResult.map((e) => Crew.fromMap(e)).toList();
   }
 
-  Future<void> deleteUser(int id) async {
+  Future<void> deleteCrew(int id) async {
     final db = await initializeDB();
     await db.delete(
       CREW_TABLE,
@@ -45,7 +45,4 @@ class DatabaseHandler {
       whereArgs: [id],
     );
   }
-
-
-
 }

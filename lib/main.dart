@@ -12,7 +12,7 @@ void main() async => runApp(MaterialApp(
   routes: {
     '/': (context) => CrewPage(),
 //    '/crew': (context) => CrewPage(),
-    '/manageCrew': (context) => ManageCrewPage(crew: new Crew(name: "New Crew", attempts: 0, startDate: DateTime.now().toIso8601String())),
+    '/manageCrew': (context) => ManageCrew(crew: new Crew(name: "New Crew", startDate: DateTime.now().toIso8601String())),
     //'/missions': (context) => MissionPage()
   },
 ));

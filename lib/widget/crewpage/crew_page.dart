@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:the_crew_missions/model/crew.dart';
 import 'package:the_crew_missions/services/database_handler.dart';
+import 'package:the_crew_missions/services/dialog_helper.dart';
 import 'package:the_crew_missions/widget/component/appbar.dart';
 import 'package:the_crew_missions/widget/manage_crew/manage_crew.dart';
 
@@ -30,6 +31,7 @@ class StatefulCrewPage extends StatefulWidget {
 /// This is the private State class that goes with MyStatefulWidget.
 class _CrewPageState extends State<StatefulCrewPage> {
   late DatabaseHandler handler;
+  DialogHelper _dialogHelper = new DialogHelper();
 
   final _formKeyCrew = GlobalKey<FormState>();
 
@@ -51,7 +53,6 @@ class _CrewPageState extends State<StatefulCrewPage> {
           slivers: <Widget>[
             theCrewAppBar("Crews", context),            
             _futureCrewBuilder(context),
-            //_futureCrewBuilder(context)
           ],
         ),
         floatingActionButton: FloatingActionButton(
@@ -67,7 +68,7 @@ class _CrewPageState extends State<StatefulCrewPage> {
 
   Widget _futureCrewBuilder(BuildContext context) {
     return FutureBuilder(
-      future: this.handler.retrieveUsers(),
+      future: this.handler.retrieveCrew(),
       builder: (BuildContext context, AsyncSnapshot<List<Crew>> snapshot) =>
         snapshot.connectionState == ConnectionState.waiting ? SliverToBoxAdapter(child: LinearProgressIndicator()) :
           snapshot.hasData ? SliverList(delegate: SliverChildBuilderDelegate((_, index) =>
@@ -80,17 +81,43 @@ class _CrewPageState extends State<StatefulCrewPage> {
                 child: Icon(Icons.delete_forever),
               ),
               key: ValueKey<int>(snapshot.data![index].id!),
+              confirmDismiss: (direction) => _dialogHelper.deleteConfirm(context),
               onDismissed: (DismissDirection direction) async {
-                await this.handler.deleteUser(snapshot.data![index].id!);
+                String crewDismissed = snapshot.data![index].name.toString();
+                await this.handler.deleteCrew(snapshot.data![index].id!);
                 setState(() {
                   snapshot.data!.remove(snapshot.data![index]);
                 });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      "Crew " + crewDismissed + ' dismissed'
+                    )
+                  )
+                );
               },
               child: Card(
                 child: ListTile(
                   contentPadding: EdgeInsets.all(8.0),
                   title: Text(snapshot.data![index].name),
-                  subtitle: Text("Id: " + snapshot.data![index].id.toString() + ", Attempts: " + snapshot.data![index].attempts.toString()),
+                  subtitle: Text("Attempts: x, Date: " + formatDate(snapshot.data![index].startDate)),
+                  trailing: Ink(
+                    decoration: const ShapeDecoration(
+                      color: Colors.lightBlue,
+                      shape: CircleBorder(),
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.mode_edit_outline_rounded),
+                      color: Colors.white,
+                      onPressed: () async {
+                        await Navigator.push(
+                          context, new MaterialPageRoute(
+                            builder: (context) => new ManageCrew(crew: snapshot.data![index],)
+                          )
+                        );
+                      },
+                    ),
+                  ),
                 )
               ),
             ),
@@ -99,6 +126,15 @@ class _CrewPageState extends State<StatefulCrewPage> {
           ) :
           SliverToBoxAdapter(child: Text('No data found')),
     );
+  }
+
+  String formatDate(String iso8601String) {
+    DateTime dateTime = DateTime.parse(iso8601String);
+
+    String month = dateTime.month.toString().length==2?dateTime.month.toString():"0"+dateTime.month.toString();
+    String day = dateTime.day.toString().length==2?dateTime.day.toString():"0"+dateTime.day.toString();
+
+    return dateTime.year.toString() + "-" + month + "-" + day;
   }
 
   void _buildAddCrewMemberBtn(BuildContext context) {
@@ -120,8 +156,8 @@ class _CrewPageState extends State<StatefulCrewPage> {
                   ),
                   onSaved: (String? value) async {
                     print("Saved value: " + value.toString());                    
-                    Crew insertCrew = new Crew(name: value.toString(), attempts: 0, startDate: DateTime.now().toIso8601String());
-                    int result = await this.handler.insertUser(insertCrew);
+                    Crew insertCrew = new Crew(name: value.toString(), startDate: DateTime.now().toIso8601String());
+                    int result = await this.handler.insertCrew(insertCrew);
                     if (result != 0) {
                       print("All good!");
                       insertCrew.id = result;
@@ -132,7 +168,8 @@ class _CrewPageState extends State<StatefulCrewPage> {
                     // Send user to manage crew
                     await Navigator.push(
                       context, new MaterialPageRoute(
-                        builder: (context) => new ManageCrewPage(crew: insertCrew)
+                        //builder: (context) => new ManageCrewPage(crew: insertCrew)
+                        builder: (context) => new ManageCrew(crew: insertCrew)
                       )
                     );
                     setState(() {

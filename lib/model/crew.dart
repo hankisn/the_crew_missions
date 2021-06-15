@@ -1,36 +1,32 @@
 class Crew {
   // final int? id;
   // final String name;
-  // final int attempts;
   // final String startDate;
   // final String? endDate;
 
   int? id;
   String name;
-  int attempts;
   String startDate;
-  String? endDate;
+  String? finishDate;
 
   Crew(
       { this.id,
       required this.name,
-      required this.attempts,
       required this.startDate,
-      this.endDate});
+      this.finishDate});
 
   Crew.fromMap(Map<String, dynamic> res)
       : id = res["id"],
         name = res["name"],
-        attempts = res["attempts"],
         startDate = res["startDate"],
-        endDate = res["endDate"];
+        finishDate = res["finishDate"];
 
   Map<String, Object?> toMap() {
-    return {'id':id,'name': name, 'attempts': attempts, 'startDate': startDate, 'endDate': endDate};
+    return {'id':id,'name': name, 'startDate': startDate, 'finishDate': finishDate};
   }
 
   @override
   String toString() {
-    return 'Crew{id: $id, name: $name, attempts: $attempts, startDate: $startDate}'; //, crewStartDate: $crewStartDate, crewEndDate: $crewEndDate}';
+    return 'Crew{id: $id, name: $name, startDate: $startDate}'; //, crewStartDate: $crewStartDate, crewEndDate: $crewEndDate}';
   }
 }
