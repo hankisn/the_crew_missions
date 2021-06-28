@@ -242,9 +242,3 @@ class _MissionPageState extends State<MissionPage> {
   }
 
 }
-
-/**
- * 
- * 
- * TODO Få til en commit til GitHub snart...
- */
