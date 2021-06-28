@@ -4,7 +4,7 @@ import 'package:the_crew_missions/model/crew.dart';
 import 'package:the_crew_missions/services/database_handler.dart';
 import 'package:the_crew_missions/services/dialog_helper.dart';
 import 'package:the_crew_missions/widget/component/appbar.dart';
-import 'package:the_crew_missions/widget/manage_crew/manage_crew.dart';
+import 'package:the_crew_missions/widget/manage_crew.dart';
 
 class CrewPage extends StatelessWidget {
   const CrewPage({Key? key}) : super(key: key);
@@ -39,7 +39,7 @@ class _CrewPageState extends State<StatefulCrewPage> {
   void initState() {
     super.initState();
     this.handler = DatabaseHandler();
-    this.handler.initializeDB().whenComplete(() async {
+    this.handler.initializeDB().whenComplete(() {
       setState(() {});
     });
   }
@@ -57,7 +57,7 @@ class _CrewPageState extends State<StatefulCrewPage> {
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: () {
-            _buildAddCrewMemberBtn(context);
+            _buildAddCrewBtn(context);
           },
           child: const Icon(Icons.add),
           backgroundColor: Colors.green,
@@ -81,7 +81,7 @@ class _CrewPageState extends State<StatefulCrewPage> {
                 child: Icon(Icons.delete_forever),
               ),
               key: ValueKey<int>(snapshot.data![index].id!),
-              confirmDismiss: (direction) => _dialogHelper.deleteConfirm(context),
+              confirmDismiss: (direction) => _dialogHelper.deleteConfirm(context, "crew"),
               onDismissed: (DismissDirection direction) async {
                 String crewDismissed = snapshot.data![index].name.toString();
                 await this.handler.deleteCrew(snapshot.data![index].id!);
@@ -96,30 +96,48 @@ class _CrewPageState extends State<StatefulCrewPage> {
                   )
                 );
               },
-              child: Card(
-                child: ListTile(
-                  contentPadding: EdgeInsets.all(8.0),
-                  title: Text(snapshot.data![index].name),
-                  subtitle: Text("Attempts: x, Date: " + formatDate(snapshot.data![index].startDate)),
-                  trailing: Ink(
-                    decoration: const ShapeDecoration(
-                      color: Colors.lightBlue,
-                      shape: CircleBorder(),
+              child: GestureDetector(
+                onTap: () async {
+                  await Navigator.push(
+                    context, new MaterialPageRoute(
+                      builder: (context) => new ManageCrew(crew: snapshot.data![index],)
+                    )
+                  );
+                },
+                child: Card(
+                  child: ListTile(
+                    contentPadding: EdgeInsets.all(8.0),
+                    title: Text(snapshot.data![index].name),
+                    subtitle: Container(
+                      child: Row(
+                        //mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          Text("Started: " + formatDate(snapshot.data![index].startDate)),
+                          if (snapshot.data![index].crewMembers != null) Padding(padding: EdgeInsets.fromLTRB(10, 0, 10, 0)),
+                          if (snapshot.data![index].crewMembers != null) Text(snapshot.data![index].crewMembers!.length.toString() + " crewmembers"),
+                        ],
+                      ),
                     ),
-                    child: IconButton(
-                      icon: const Icon(Icons.mode_edit_outline_rounded),
-                      color: Colors.white,
-                      onPressed: () async {
-                        await Navigator.push(
-                          context, new MaterialPageRoute(
-                            builder: (context) => new ManageCrew(crew: snapshot.data![index],)
-                          )
-                        );
-                      },
+                    trailing: Ink(
+                      decoration: const ShapeDecoration(
+                        color: Colors.lightBlue,
+                        shape: CircleBorder(),
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.mode_edit_outline_rounded),
+                        color: Colors.white,
+                        onPressed: () async {
+                          await Navigator.push(
+                            context, new MaterialPageRoute(
+                              builder: (context) => new ManageCrew(crew: snapshot.data![index],)
+                            )
+                          );
+                        },
+                      ),
                     ),
-                  ),
-                )
-              ),
+                  )
+                ),
+              )
             ),
           
             childCount: (snapshot.data as List<Crew>).length)
@@ -137,7 +155,7 @@ class _CrewPageState extends State<StatefulCrewPage> {
     return dateTime.year.toString() + "-" + month + "-" + day;
   }
 
-  void _buildAddCrewMemberBtn(BuildContext context) {
+  void _buildAddCrewBtn(BuildContext context) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -161,14 +179,12 @@ class _CrewPageState extends State<StatefulCrewPage> {
                     if (result != 0) {
                       print("All good!");
                       insertCrew.id = result;
-                      print("Id: " + result.toString());
                     } else {
                       print("Fcuk!");
                     }
                     // Send user to manage crew
                     await Navigator.push(
                       context, new MaterialPageRoute(
-                        //builder: (context) => new ManageCrewPage(crew: insertCrew)
                         builder: (context) => new ManageCrew(crew: insertCrew)
                       )
                     );

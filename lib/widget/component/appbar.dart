@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:the_crew_missions/widget/crewpage/crew_page.dart';
+import 'package:the_crew_missions/widget/crew_page.dart';
 
 SliverAppBar theCrewAppBar(String title, BuildContext context) {
   return SliverAppBar(
