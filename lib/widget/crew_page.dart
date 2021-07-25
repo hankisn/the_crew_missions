@@ -1,37 +1,42 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:the_crew_missions/model/crew.dart';
 import 'package:the_crew_missions/services/database_handler.dart';
-import 'package:the_crew_missions/services/dialog_helper.dart';
+import 'package:the_crew_missions/theme/the_crew_theme.dart';
 import 'package:the_crew_missions/widget/component/appbar.dart';
 import 'package:the_crew_missions/widget/manage_crew.dart';
+import 'package:the_crew_missions/widget/component/navbar.dart';
+
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class CrewPage extends StatelessWidget {
-  const CrewPage({Key? key}) : super(key: key);
-
-  static const String _title = 'Crews';
-
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      title: _title,
-      home: StatefulCrewPage(),
+    String title = "Crews";    
+
+    return MaterialApp(
+      theme: TheCrewTheme.standardTheme,
+      home: _StatefullCrewPage(title: title,),
     );
   }
 }
 
-/// This is the stateful widget that the main application instantiates.
-class StatefulCrewPage extends StatefulWidget {
-  const StatefulCrewPage({Key? key}) : super(key: key);
+class _StatefullCrewPage extends StatefulWidget {
+  final String title;
+
+  _StatefullCrewPage({
+    Key? key, required this.title
+  }) : super(key: key);
 
   @override
-  State<StatefulCrewPage> createState() => _CrewPageState();
+  _CrewPageState createState() => _CrewPageState();
+
+  
 }
 
-/// This is the private State class that goes with MyStatefulWidget.
-class _CrewPageState extends State<StatefulCrewPage> {
+class _CrewPageState extends State<_StatefullCrewPage> {
+  final GlobalKey<ScaffoldMessengerState> rootScaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
+
   late DatabaseHandler handler;
-  DialogHelper _dialogHelper = new DialogHelper();
 
   final _formKeyCrew = GlobalKey<FormState>();
 
@@ -43,26 +48,44 @@ class _CrewPageState extends State<StatefulCrewPage> {
       setState(() {});
     });
   }
-  
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      home: Scaffold(
-        backgroundColor: Colors.grey[900],
-        body: CustomScrollView(
-          slivers: <Widget>[
-            theCrewAppBar("Crews", context),            
-            _futureCrewBuilder(context),
-          ],
-        ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () {
-            _buildAddCrewBtn(context);
-          },
-          child: const Icon(Icons.add),
-          backgroundColor: Colors.green,
-        ),
-      )
+    return Scaffold(
+      body: CustomScrollView(
+        slivers: <Widget>[
+          theCrewAppBar('Crews', context),
+          _futureCrewBuilder(context),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          _buildAddCrewBtn(context);
+        },
+        child: const Icon(Icons.add),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        items: <BottomNavigationBarItem>[
+          homeMenuItem(),
+          helpMenuItem(),
+        ],
+        onTap: (index) {
+          switch(index) {
+            case 0:
+              Navigator.push(
+                context, new MaterialPageRoute(
+                  builder: (context) => new CrewPage(),
+                )
+              );
+              break;
+            case 1:
+              print("Get help!");
+              break;
+            default:
+              break;
+          }
+        },
+      ),
     );
   }
 
@@ -75,13 +98,42 @@ class _CrewPageState extends State<StatefulCrewPage> {
             Dismissible(
               direction: DismissDirection.endToStart,
               background: Container(
-                color: Colors.red,
                 alignment: Alignment.centerRight,
                 padding: EdgeInsets.symmetric(horizontal: 10.0),
                 child: Icon(Icons.delete_forever),
+                margin: EdgeInsets.fromLTRB(5.0, 5.0, 5.0, 5.0),
+                decoration: new BoxDecoration(
+                  borderRadius: BorderRadius.circular(5.0),
+                  color: Theme.of(context).errorColor,
+                ),
               ),
               key: ValueKey<int>(snapshot.data![index].id!),
-              confirmDismiss: (direction) => _dialogHelper.deleteConfirm(context, "crew"),
+              confirmDismiss: (direction) async {
+                return showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return AlertDialog(
+                      title: const Text("Confirm"),
+                      content: const Text("Are you sure you want to delete this crew?"),
+                      actions: <Widget>[
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(context).pop(true);
+                          },
+                          child: const Text("DELETE"),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(context).pop(false);
+                            print("No delete");
+                          },
+                          child: const Text("CANCEL"),
+                        ),
+                      ],
+                    );
+                  },
+                );
+              },
               onDismissed: (DismissDirection direction) async {
                 String crewDismissed = snapshot.data![index].name.toString();
                 await this.handler.deleteCrew(snapshot.data![index].id!);
@@ -96,48 +148,44 @@ class _CrewPageState extends State<StatefulCrewPage> {
                   )
                 );
               },
-              child: GestureDetector(
-                onTap: () async {
-                  await Navigator.push(
-                    context, new MaterialPageRoute(
-                      builder: (context) => new ManageCrew(crew: snapshot.data![index],)
-                    )
-                  );
-                },
-                child: Card(
+              child: Card(
+                child: InkWell(
+                  onTap: () async {
+                    await Navigator.push(
+                      context, new MaterialPageRoute(
+                        builder: (context) => new ManageCrew(crew: snapshot.data![index],)
+                      )
+                    );
+                  },
                   child: ListTile(
                     contentPadding: EdgeInsets.all(8.0),
-                    title: Text(snapshot.data![index].name),
+                    title: Text(snapshot.data![index].name, style: Theme.of(context).textTheme.headline4),
                     subtitle: Container(
-                      child: Row(
-                        //mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          Text("Started: " + formatDate(snapshot.data![index].startDate)),
-                          if (snapshot.data![index].crewMembers != null) Padding(padding: EdgeInsets.fromLTRB(10, 0, 10, 0)),
-                          if (snapshot.data![index].crewMembers != null) Text(snapshot.data![index].crewMembers!.length.toString() + " crewmembers"),
-                        ],
+                      child: DefaultTextStyle(
+                        style: Theme.of(context).textTheme.subtitle1!,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text("Started: " + formatDate(snapshot.data![index].startDate)),
+                            if (snapshot.data![index].crewMembers != null) Text(snapshot.data![index].crewMembers!.length.toString() + " crewmembers"),
+                          ],
+                        ),
                       ),
                     ),
-                    trailing: Ink(
-                      decoration: const ShapeDecoration(
-                        color: Colors.lightBlue,
-                        shape: CircleBorder(),
-                      ),
-                      child: IconButton(
-                        icon: const Icon(Icons.mode_edit_outline_rounded),
-                        color: Colors.white,
-                        onPressed: () async {
-                          await Navigator.push(
-                            context, new MaterialPageRoute(
-                              builder: (context) => new ManageCrew(crew: snapshot.data![index],)
-                            )
-                          );
-                        },
-                      ),
+                    trailing: IconButton(
+                      icon: const FaIcon(FontAwesomeIcons.edit),
+                      color: Theme.of(context).primaryIconTheme.color,
+                      onPressed: () async {
+                        await Navigator.push(
+                          context, new MaterialPageRoute(
+                            builder: (context) => new ManageCrew(crew: snapshot.data![index],)
+                          )
+                        );
+                      },
                     ),
-                  )
+                  ),
                 ),
-              )
+              ),
             ),
           
             childCount: (snapshot.data as List<Crew>).length)
@@ -146,7 +194,7 @@ class _CrewPageState extends State<StatefulCrewPage> {
     );
   }
 
-  String formatDate(String iso8601String) {
+  String formatDate(String iso8601String, {style}) {
     DateTime dateTime = DateTime.parse(iso8601String);
 
     String month = dateTime.month.toString().length==2?dateTime.month.toString():"0"+dateTime.month.toString();
@@ -213,5 +261,4 @@ class _CrewPageState extends State<StatefulCrewPage> {
       }
     );
   }
-
 }
