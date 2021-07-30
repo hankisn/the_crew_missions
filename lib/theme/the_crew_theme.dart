@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class TheCrewTheme {
   static Color primary = Colors.blue[800]!;
@@ -11,7 +10,6 @@ class TheCrewTheme {
 
   static ThemeData get standardTheme {
     return ThemeData(
-      backgroundColor: Colors.red,
       primaryColor: primary,
       primaryIconTheme: new IconThemeData(
         color: icons,
@@ -29,11 +27,13 @@ class TheCrewTheme {
           color: Colors.white,
           fontSize: 20,
         ),
-        headline4: GoogleFonts.audiowide(
+        headline4: TextStyle(
+          fontFamily: 'Audiowide',
           color: Colors.black54,
           fontSize: 26,
         ),
-        headline5: GoogleFonts.audiowide(
+        headline5: TextStyle(
+          fontFamily: 'Audiowide',
           color: Colors.black54,
           fontSize: 24,
         ),
@@ -42,21 +42,26 @@ class TheCrewTheme {
           color: Colors.black54,
           fontSize: 18,
         ),
-        subtitle1: GoogleFonts.iceland(
+        subtitle1: TextStyle(
+          fontFamily: 'Iceland',
           color: Colors.black,
           fontSize: 20,
         ),
-        subtitle2: GoogleFonts.iceland(
+        subtitle2: TextStyle(
+          fontFamily: 'Iceland',
           color: Colors.black,
           fontSize: 18,
         ),
-        button: GoogleFonts.audiowide(
+        button: TextStyle(
+          fontFamily: 'Audiowide',
           color: Colors.white,
         ),
-        caption: GoogleFonts.iceland(
+        caption: TextStyle(
+          fontFamily: 'Iceland',
           fontSize: 14,
         ),
-        overline: GoogleFonts.iceland(
+        overline: TextStyle(
+          fontFamily: 'Iceland',
           fontSize: 20,
         ),
       ),
@@ -87,11 +92,11 @@ class TheCrewTheme {
         showSelectedLabels: true,
         unselectedItemColor: icons,
         selectedLabelStyle: new TextStyle(
-          fontFamily: 'iceland',
+          fontFamily: 'Iceland',
           fontSize: 20,
         ),
         unselectedLabelStyle: new TextStyle(
-          fontFamily: 'iceland',
+          fontFamily: 'Iceland',
           fontSize: 20,
         ),
       ),

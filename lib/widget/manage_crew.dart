@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:the_crew_missions/model/crew.dart';
 import 'package:the_crew_missions/model/crew_member.dart';
 import 'package:the_crew_missions/services/database_handler.dart';
-import 'package:the_crew_missions/theme/pallette.dart';
 import 'package:the_crew_missions/theme/the_crew_theme.dart';
 import 'package:the_crew_missions/widget/component/appbar.dart';
 
@@ -37,6 +36,8 @@ class _ManageCrewPageState extends State<ManageCrew> with SingleTickerProviderSt
   late DatabaseHandler handler;
   late int _attempts;
   late int _mission;
+  late List<String> _autoCompleteOptions = [];
+  late List<CrewMember> _allCrewMembers = [];
 
   final GlobalKey<ScaffoldMessengerState> rootScaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
@@ -49,7 +50,9 @@ class _ManageCrewPageState extends State<ManageCrew> with SingleTickerProviderSt
     super.initState();
     this.handler = DatabaseHandler();
     this.handler.initializeDB().whenComplete(() {
-      setState(() { });
+      setState(() {
+        _findAllCrew();
+      });
     });
 
     this._attempts = -1;
@@ -140,36 +143,7 @@ class _ManageCrewPageState extends State<ManageCrew> with SingleTickerProviderSt
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextFormField(
-                  decoration: const InputDecoration(
-                    icon: Icon(Icons.person),
-                    hintText: 'Crew member name',
-                    labelText: 'Name *',
-                  ),
-                  onSaved: (String? value) async {
-                    print("Saved value: " + value.toString());                    
-                    CrewMember insertCrewMember = new CrewMember(name: value.toString());
-                    int crewMemberId = await handler.insertCrewMember(insertCrewMember, this.crew.id!);
-                    List<CrewMember> _crewMembers = this.crew.crewMembers!;
-                    insertCrewMember.id = crewMemberId;
-                    _crewMembers.add(insertCrewMember);
-                    this.crew.crewMembers = _crewMembers;
-                    
-                    setState(() {
-                      // Redraw the list of crews
-                    });
-                    Navigator.pop(context, 'Saved value: ' + value.toString());
-                    rootScaffoldMessengerKey.currentState!.showSnackBar(
-                      SnackBar(
-                        duration: const Duration(seconds: 3),
-                        content: Text(value.toString() + ' added to ' + this.crew.name.toString(),),
-                      ),
-                    );
-                  },
-                  validator: (String? value) {
-                    return (value!.length < 1 || value.contains('@')) ? 'Illegal chars or no name.' : null;
-                  },
-                ),
+                _showAutocompleteField(),
                 ElevatedButton(
                   onPressed: () {
                     if(_formKeyCrewMember.currentState!.validate()) {
@@ -184,6 +158,116 @@ class _ManageCrewPageState extends State<ManageCrew> with SingleTickerProviderSt
           ):Text("Full squad"),
         );
       }
+    );
+  }
+
+  Future<void> _findAllCrew() async {
+    List<String> _options = [];
+    List<CrewMember> _crewmembers = await this.handler.retrieveCrewMembers();
+
+    if (_crewmembers.isNotEmpty) {
+      for (int i = 0; i < _crewmembers.length; i++) {
+        _options.add(_crewmembers[i].name);
+      }
+
+      setState(() {
+        this._autoCompleteOptions = _options;
+        this._allCrewMembers = _crewmembers;
+      });
+    }
+  }
+
+  Widget _showAutocompleteField() {
+    List<String> _options = this._autoCompleteOptions;
+    return RawAutocomplete<String>(
+      optionsBuilder: (TextEditingValue textEditingValue) {
+        return this._autoCompleteOptions.where((String option) {
+          return option.contains(textEditingValue.text);
+        });
+      },
+      onSelected: (String selection) {
+        setState(() {
+        });
+      },
+      fieldViewBuilder: (BuildContext context,
+          TextEditingController textEditingController,
+          FocusNode focusNode,
+          VoidCallback onFieldSubmitted) {
+        return TextFormField(
+          controller: textEditingController,
+          decoration: const InputDecoration(
+            hintText: 'Crew member name',
+          ),
+          focusNode: focusNode,
+          onFieldSubmitted: (String value) {
+            onFieldSubmitted();
+          },
+          validator: (String? value) {
+            if (!_options.contains(value)) {
+              print("New Crewmember");
+            }
+
+            return (value!.length < 1 || value.contains('@')) ? 'Illegal chars or no name.' : null;
+          },
+          onSaved: (String? value) async {
+            List<CrewMember> _selectedCrew = _allCrewMembers.where((e) => e.name == value).toList();
+            CrewMember insertCrewMember;
+            if (_selectedCrew.isNotEmpty && _selectedCrew.length == 1) {
+              print("Crewmember already exists, not creating new one.");
+              insertCrewMember = _selectedCrew[0];
+            } else {
+              print("Creating new crewmember: " + value.toString());
+              insertCrewMember = new CrewMember(name: value.toString());
+            }
+
+            if (this.crew.crewMembers!.where((e) => e.id == insertCrewMember.id).toList().isNotEmpty) {
+              print("Crewmember is already part of the crew!");
+              _snackBarMessage("Crewmember " + insertCrewMember.name + " is already part of the crew!", Colors.red[800]!, 3);
+            } else {
+              int crewMemberId = await handler.insertCrewMember(insertCrewMember, this.crew.id!);
+              List<CrewMember> _crewMembers = this.crew.crewMembers!;
+              insertCrewMember.id = crewMemberId;
+              _crewMembers.add(insertCrewMember);
+              this.crew.crewMembers = _crewMembers;
+
+              setState(() {
+                // Redraw the list of crews
+              });
+              _snackBarMessage(value.toString() + ' added to ' + this.crew.name.toString());
+            }
+
+            Navigator.pop(context, 'Saved value: ' + value.toString());
+          },
+        );
+      },
+      optionsViewBuilder: (BuildContext context,
+          AutocompleteOnSelected<String> onSelected,
+          Iterable<String> options) {
+        return Align(
+          alignment: Alignment.topLeft,
+          child: Material(
+            elevation: 4.0,
+            child: SizedBox(
+              height: 200.0,
+              child: ListView.builder(
+                padding: const EdgeInsets.all(8.0),
+                itemCount: options.length,
+                itemBuilder: (BuildContext context, int index) {
+                  final String option = options.elementAt(index);
+                  return GestureDetector(
+                    onTap: () {
+                      onSelected(option);
+                    },
+                    child: ListTile(
+                      title: Text(option),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -217,14 +301,7 @@ class _ManageCrewPageState extends State<ManageCrew> with SingleTickerProviderSt
                         onSaved: (value) async {
                           this.crew.name = value.toString();
                           handler.insertCrew(crew);
-                          rootScaffoldMessengerKey.currentState!.showSnackBar(
-                            SnackBar(
-                              duration: const Duration(seconds: 3),
-                              content: const Text(
-                                "Crew updated!",
-                              ),
-                            ),
-                          );
+                          _snackBarMessage("Crew updated!");
                         },
                       ),
                     ),
@@ -274,88 +351,65 @@ class _ManageCrewPageState extends State<ManageCrew> with SingleTickerProviderSt
                               _formKey.currentState!.save();
                             }
                           } else {
-                            rootScaffoldMessengerKey.currentState!.showSnackBar(
-                              SnackBar(
-                                duration: const Duration(seconds: 3),
-                                content: const Text(
-                                  "Start date is after finish date...",
-                                ),
-                              ),
-                            );
+                            _snackBarMessage("Start date is after finish date...", TheCrewTheme.error, 3);
                           }
                         },
                         currentTime: DateTime.parse(this.crew.startDate).toLocal(),
-                        locale: LocaleType.no
+                        locale: LocaleType.no //-------------------------------------------//
                       );
                     },
                     child: Column(
                       children: <Widget>[
                         FaIcon(FontAwesomeIcons.calendarPlus),
-                        Text(
-                          "Start date",
-                          style: TheCrewTheme.standardTheme.textTheme.headline6,
-                        ),
+                        Text("Start date", style: TheCrewTheme.standardTheme.textTheme.headline6,),
                         Text(
                           "${DateTime.parse(this.crew.startDate).toLocal()}".split(' ')[0],
-                          style: TheCrewTheme.standardTheme.textTheme.headline6,
+                          style: TheCrewTheme.standardTheme.textTheme.subtitle1,
                         ),
                       ],
                     ),
                   ),
                   InkWell(
                     onTap: () {
-                      DatePicker.showDatePicker(context,
-                        showTitleActions: true,
-                        minTime: DateTime(2021, 1, 1),
-                        maxTime: DateTime(2050, 12, 12),
-                        onChanged: (date) {
-                          print('change $date');
-                        },
-                        onConfirm: (date) {
-                          if (DateTime.parse(this.crew.startDate).toLocal().isBefore(date)) {
-                            setState(() {
-                              this.crew.finishDate = date.toIso8601String();
-                            });
-                            if (_formKey.currentState!.validate()) {
-                              // Process data.
-                              _formKey.currentState!.save();
+                      if (this._mission < 50) {
+                        print("Campaign not finished yet: " + this._mission.toString());
+                        _snackBarMessage("Campaign is not finished yet, can't set finish date until all missions are completed.");
+                      } else {
+                        DatePicker.showDatePicker(context,
+                          showTitleActions: true,
+                          minTime: DateTime(2021, 1, 1),
+                          maxTime: DateTime(2050, 12, 12),
+                          onChanged: (date) {
+                            print('change $date');
+                          },
+                          onConfirm: (date) {
+                            if (DateTime.parse(this.crew.startDate).toLocal().isBefore(date)) {
+                              setState(() {
+                                this.crew.finishDate = date.toIso8601String();
+                              });
+                              if (_formKey.currentState!.validate()) {
+                                // Process data.
+                                _formKey.currentState!.save();
+                              }
+                            } else {
+                              print("Problem with date");
+                              _snackBarMessage("Finish date is before start date...", TheCrewTheme.error, 3);
                             }
-                          } else {
-                            print("Problem with date");
-                            /**
-                             * 
-                             * Denne må gjøres om fra en snackbar 
-                             * til en info, som kan enten trykkes
-                             * bort eller forsvinner av seg selv.
-                             * 
-                             */
-                            rootScaffoldMessengerKey.currentState!.showSnackBar(
-                              SnackBar(
-                                backgroundColor: snackBarError(),
-                                duration: const Duration(seconds: 3),
-                                content: const Text(
-                                  "Finish date is before start date...",
-                                ),
-                              ),
-                            );
-                          }
-                        },
-                        currentTime: this.crew.finishDate!=null?DateTime.parse(this.crew.finishDate.toString()).toLocal():DateTime.now().toLocal(),
-                        locale: LocaleType.no
-                      );
+                          },
+                          currentTime: this.crew.finishDate!=null?DateTime.parse(this.crew.finishDate.toString()).toLocal():DateTime.now().toLocal(),
+                          locale: LocaleType.no
+                        );
+                      }
                     },
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: <Widget>[
                         FaIcon(FontAwesomeIcons.calendarCheck),
-                        Text(
-                          "Finish date",
-                          style: TheCrewTheme.standardTheme.textTheme.headline6,
-                        ),
+                        Text("Finish date", style: TheCrewTheme.standardTheme.textTheme.headline6,),
                         this.crew.finishDate==null?Text("Add Finish Date", style: TheCrewTheme.standardTheme.textTheme.subtitle2,): 
                         Text(
                           "${DateTime.parse(this.crew.finishDate!).toLocal()}".split(' ')[0],
-                          style: TheCrewTheme.standardTheme.textTheme.headline6,
+                          style: TheCrewTheme.standardTheme.textTheme.subtitle1,
                         ),
                       ],
                     ),
@@ -466,14 +520,7 @@ class _ManageCrewPageState extends State<ManageCrew> with SingleTickerProviderSt
                     snapshot.data!.remove(snapshot.data![index]);
                     this.crew.crewMembers!.removeAt(index);
                   });
-                  rootScaffoldMessengerKey.currentState!.showSnackBar(
-                    SnackBar(
-                      duration: const Duration(seconds: 3),
-                      content: Text(
-                        crewMemberDismissed + " dismissed",
-                      ),
-                    ),
-                  );
+                  _snackBarMessage(crewMemberDismissed + " dismissed");
                 },
                 child: Card(
                   color: TheCrewTheme.cardOnCards,
@@ -489,4 +536,18 @@ class _ManageCrewPageState extends State<ManageCrew> with SingleTickerProviderSt
         : Text("No crewmembers"),
     );
   }
+
+  void _snackBarMessage(String message, [Color color = Colors.white, int duration = 2]) {
+    if(color == Colors.white) {
+      color = TheCrewTheme.standardTheme.snackBarTheme.backgroundColor!;
+    }
+    rootScaffoldMessengerKey.currentState!.showSnackBar(
+      SnackBar(
+        backgroundColor: color,
+        duration: Duration(seconds: duration),
+        content: Text(message),
+      ),
+    );
+  }
+
 }

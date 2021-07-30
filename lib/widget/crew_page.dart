@@ -242,7 +242,7 @@ class _CrewPageState extends State<_StatefullCrewPage> {
                     Navigator.pop(context, 'Saved value: ' + value.toString());
                   },
                   validator: (String? value) {
-                    return (value!.length < 1 || value.contains('@')) ? 'Illegal chars or no name.' : null;
+                    return (value!.length == 0 || value.contains('@')) ? 'Illegal chars or no name.' : null;
                   },
                 ),
                 ElevatedButton(

@@ -49,7 +49,9 @@ class _MissionPageState extends State<MissionPage> {
     this.handler = DatabaseHandler();
     this.handler.initializeDB().whenComplete(() async {
       this._mission = await this.handler.getProgression(this.crew.id!);
-      this._mission +=1;
+      if (this._mission < 50) {
+        this._mission +=1;
+      }
       setState(() { });
     });
     this.attemptsList = [];
@@ -78,16 +80,18 @@ class _MissionPageState extends State<MissionPage> {
       theme: TheCrewTheme.standardTheme,
       scaffoldMessengerKey: rootScaffoldMessengerKey,
       home: Scaffold(
-        backgroundColor: Colors.grey[800],
-        body: CustomScrollView(
-          slivers: <Widget>[
-            theCrewAppBar("Register Missions", context),
-            new SliverList(delegate: SliverChildListDelegate([
-              _missionControls(),
-            ])),
-            if (this.attemptsList.isNotEmpty) _attemptsList(),
-            if (this.attemptsList.isNotEmpty) _deleteLastBtn(context),
-          ],
+        //backgroundColor: Colors.grey[800],
+        body: Card(
+          child: CustomScrollView(
+            slivers: <Widget>[
+              theCrewAppBar("Register Missions", context),
+              new SliverList(delegate: SliverChildListDelegate([
+                _missionControls(),
+              ])),
+              if (this.attemptsList.isNotEmpty) _attemptsList(),
+              if (this.attemptsList.isNotEmpty) _deleteLastBtn(context),
+            ],
+          ),
         ),
         bottomNavigationBar: BottomNavigationBar(
           items: <BottomNavigationBarItem>[
@@ -153,7 +157,7 @@ class _MissionPageState extends State<MissionPage> {
 
   Widget _attemptsList() {
     return SliverPadding(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(10),
       sliver: SliverGrid.extent(
         maxCrossAxisExtent: 110,
         mainAxisSpacing: 10.0,
@@ -216,8 +220,9 @@ class _MissionPageState extends State<MissionPage> {
     return Form(
       key: _formKey,
       child: Container(
-        color: Colors.blueGrey[200],
         padding: EdgeInsets.all(10.0),
+        margin: EdgeInsets.all(10.0),
+        color: TheCrewTheme.cardOnCards,
         child: Column(
           children: <Widget>[
             Row(
@@ -344,7 +349,6 @@ class _MissionPageState extends State<MissionPage> {
         content: Text(message),
       ),
     );
-
   }
 
 }
